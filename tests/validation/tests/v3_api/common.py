@@ -79,6 +79,8 @@ TEST_ALL_SNAPSHOT = ast.literal_eval(
 if_test_all_snapshot = \
     pytest.mark.skipif(TEST_ALL_SNAPSHOT is False,
                        reason='Snapshots check tests are skipped')
+# As of release 2.4 default rke scan profile is "rke-cis-1.4"
+CIS_SCAN_PROFILE = os.environ.get('RANCHER_CIS_SCAN_PROFILE', "rke-cis-1.4")
 
 # here are all supported roles for RBAC testing
 CLUSTER_MEMBER = "cluster-member"
@@ -177,11 +179,13 @@ nested_group = {
     "group_dic": None,
     "groups": None
 }
-if_test_group_rbac = pytest.mark.skipif(not AUTH_PROVIDER
-                                        or not AUTH_USER_PASSWORD,
-                                        reason='Group RBAC tests are skipped.'
-                                               'Required AUTH env variables '
-                                               'have not been set.')
+auth_requirements = not AUTH_PROVIDER or not AUTH_USER_PASSWORD
+if_test_group_rbac = pytest.mark.skipif(
+    auth_requirements,
+    reason='Group RBAC tests are skipped.'
+           'Required AUTH env variables '
+           'have not been set.'
+)
 
 
 def is_windows(os_type=TEST_OS):
@@ -246,8 +250,8 @@ def wait_for_condition(client, resource, check_function, fail_handler=None,
     while not check_function(resource):
         if time.time() - start > timeout:
             exceptionMsg = 'Timeout waiting for ' + resource.baseType + \
-                ' to satisfy condition: ' + \
-                inspect.getsource(check_function)
+                           ' to satisfy condition: ' + \
+                           inspect.getsource(check_function)
             if fail_handler:
                 exceptionMsg = exceptionMsg + fail_handler(resource)
             raise Exception(exceptionMsg)
@@ -977,6 +981,7 @@ def validate_dns_entry_windows(pod, host, expected):
                 ping_validation_pass = True
                 break
         return ping_validation_pass and (" (0% loss)" in str(ping_output))
+
     wait_for(callback=ping_check,
              timeout_message="Failed to ping {0}".format(host))
 
@@ -990,6 +995,7 @@ def validate_dns_entry_windows(pod, host, expected):
                 dig_validation_pass = False
                 break
         return dig_validation_pass
+
     wait_for(callback=dig_check,
              timeout_message="Failed to resolve {0}".format(host))
 
@@ -1743,8 +1749,9 @@ def validate_catalog_app(proj_client, app, external_id, answer=None):
     parameters = external_id.split('&')
     assert len(parameters) > 1, \
         "Incorrect list of parameters from catalog external ID"
-    chart = parameters[len(parameters) - 2].split("=")[1] + "-" + \
-        parameters[len(parameters) - 1].split("=")[1]
+    chart_prefix = parameters[len(parameters) - 2].split("=")[1]
+    chart_suffix = parameters[len(parameters) - 1].split("=")[1]
+    chart = chart_prefix + "-" + chart_suffix
     app_name = parameters[len(parameters) - 2].split("=")[1]
     workloads = proj_client.list_workload(namespaceId=ns).data
     for wl in workloads:
@@ -1915,13 +1922,13 @@ def rbac_cleanup():
     """ remove the project, namespace and users created for the RBAC tests"""
     try:
         client = get_admin_client()
-    except:
+    except Exception:
         print("Not able to get admin client. Not performing RBAC cleanup")
         return
     for _, value in rbac_data["users"].items():
         try:
             client.delete(value["user"])
-        except:
+        except Exception:
             pass
     client.delete(rbac_data["project"])
     client.delete(rbac_data["wl_unshared"])
@@ -2024,9 +2031,10 @@ def validate_create_catalog(token, catalog_name, branch, url, permission=True):
             client.create_catalog(name=catalog_name,
                                   branch=branch,
                                   url=url)
-        assert e.value.error.status == 403 and \
-            e.value.error.code == 'Forbidden', \
-            "user with no permission should receive 403: Forbidden"
+        error_msg = "user with no permission should receive 403: Forbidden"
+        error_code = e.value.error.code
+        error_status = e.value.error.status
+        assert error_status == 403 and error_code == 'Forbidden', error_msg
         return None
     else:
         try:
@@ -2142,7 +2150,7 @@ def validate_backup_create(namespace, backup_info, backup_mode=None):
                 continue
             get_filesystem_snapshots = 'ls /opt/rke/etcd-snapshots'
             response = node.execute_command(get_filesystem_snapshots)[0]
-            assert backup_info["etcdbackupdata"][0]['filename'] in response,\
+            assert backup_info["etcdbackupdata"][0]['filename'] in response, \
                 "The filename doesn't match any of the files locally"
     return namespace, backup_info
 
@@ -2191,7 +2199,7 @@ def validate_backup_delete(namespace, backup_info, backup_mode=None):
         cluster.etcdBackups(name=backup_info["backupname"])['data'][0]
     )
     wait_for_backup_to_delete(cluster, backup_info["backupname"])
-    assert len(cluster.etcdBackups(name=backup_info["backupname"])) == 0,\
+    assert len(cluster.etcdBackups(name=backup_info["backupname"])) == 0, \
         "backup shouldn't be listed in the Cluster backups"
     if backup_mode == "s3":
         # Check the backup reference is deleted in Rancher and S3
@@ -2285,6 +2293,7 @@ def get_user_by_group(group, nested=False):
     if nested is False, return the direct users in the group;
     otherwise, return all users including those from nested groups
     """
+
     def get_user_in_nested_group(group, source):
         if group == "":
             return []
@@ -2402,6 +2411,7 @@ class WebsocketLogParse:
     the class is used for receiving and parsing the message
     received from the websocket
     """
+
     def __init__(self):
         self.lock = Lock()
         self._last_message = ''
