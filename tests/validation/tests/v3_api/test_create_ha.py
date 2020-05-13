@@ -16,7 +16,7 @@ from .common import set_url_password_token
 from .common import validate_cluster
 from .common import validate_cluster_state
 from .common import wait_until_active
-from lib.aws import AmazonWebServices
+from lib.aws import AmazonWebServices, AWS_USER
 from .test_rke_cluster_provisioning import rke_config
 
 DATA_SUBDIR = os.path.join(os.path.dirname(os.path.realpath(__file__)),
@@ -305,6 +305,10 @@ def create_rke_cluster_config(aws_nodes):
     rkeconfig = rkeconfig.replace("$ip1", aws_nodes[0].public_ip_address)
     rkeconfig = rkeconfig.replace("$ip2", aws_nodes[1].public_ip_address)
     rkeconfig = rkeconfig.replace("$ip3", aws_nodes[2].public_ip_address)
+
+    rkeconfig = rkeconfig.replace("$user1", AWS_USER)
+    rkeconfig = rkeconfig.replace("$user2", AWS_USER)
+    rkeconfig = rkeconfig.replace("$user3", AWS_USER)
 
     rkeconfig = rkeconfig.replace("$internalIp1",
                                   aws_nodes[0].private_ip_address)
