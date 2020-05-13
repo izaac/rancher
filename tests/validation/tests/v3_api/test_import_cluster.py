@@ -1,5 +1,5 @@
 import os
-from lib.aws import AmazonWebServices
+from lib.aws import AmazonWebServices, AWS_USER
 from .common import get_user_client
 from .common import run_command
 from .common import random_test_name
@@ -96,9 +96,11 @@ def create_rke_cluster_config(aws_nodes):
     for i in range(0, AWS_NODE_COUNT):
         ipstring = "$ip" + str(i)
         intipstring = "$intip" + str(i)
+        userstring = "$user" + str(i)
         rkeconfig = rkeconfig.replace(ipstring, aws_nodes[i].public_ip_address)
         rkeconfig = rkeconfig.replace(intipstring,
                                       aws_nodes[i].private_ip_address)
+        rkeconfig = rkeconfig.replace(userstring, AWS_USER)
     rkeconfig = rkeconfig.replace("$AWS_SSH_KEY_NAME", AWS_SSH_KEY_NAME)
 
     clusterfilepath = DATA_SUBDIR + "/" + "clusternew.yml"
