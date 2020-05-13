@@ -4,14 +4,14 @@ auth:
 nodes:
   - address: $ip0
     internal_address: $intip0
-    user: $user1
+    user: $user0
     role: [etcd, controlplane,worker]
   - address: $ip1
     internal_address: $intip1
-    user: $user2
+    user: $user1
     role: [etcd, controlplane,worker]
   - address: $ip2
     internal_address: $intip2
-    user: $user3
+    user: $user2
     role: [etcd, controlplane,worker]
 
