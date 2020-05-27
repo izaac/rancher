@@ -264,7 +264,7 @@ def test_rbac_run_scan_project_read_only():
 def create_project_client(request):
     aws_nodes = \
         AmazonWebServices().create_multiple_nodes(
-            5, random_test_name(HOST_NAME))
+            3, random_test_name(HOST_NAME))
     cluster_detail["nodes"] = aws_nodes
     node_roles = [
         ["controlplane"], ["etcd"], ["worker"]
@@ -321,7 +321,8 @@ def create_project_client(request):
         account_update_file = DATA_SUBDIR + "/account_update.yaml"
         all_ns = execute_kubectl_cmd(
             "get namespaces -A -o json | jq -r '.items[].metadata.name'",
-            json_out=False
+            json_out=False,
+            stderr=True
         )
         for ns in all_ns.split():
             execute_kubectl_cmd("apply -f {0} -n {1}".
