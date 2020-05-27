@@ -4,7 +4,7 @@ import time
 import os
 from rancher import ApiError
 from lib.aws import AmazonWebServices
-from .common import CLUSTER_MEMBER
+from .common import CLUSTER_MEMBER, run_command
 from .common import CLUSTER_OWNER
 from .common import CIS_SCAN_PROFILE
 from .common import create_kubeconfig
@@ -262,6 +262,8 @@ def test_rbac_run_scan_project_read_only():
 
 @pytest.fixture(scope='module', autouse="True")
 def create_project_client(request):
+    run_command("jq --version")
+    assert False
     aws_nodes = \
         AmazonWebServices().create_multiple_nodes(
             3, random_test_name(HOST_NAME))
