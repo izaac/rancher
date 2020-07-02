@@ -7,9 +7,18 @@ ENV PYTHONPATH /src/rancher-validation
 ARG RKE_VERSION=v1.0.2
 ARG CLI_VERSION=v2.3.2
 ARG SONOBUOY_VERSION=0.18.2
+ARG CHROME_VERSION="google-chrome-stable"
 
 
 COPY [".", "$WORKSPACE"]
+
+RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
+  && echo "deb http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
+  && apt-get update -qqy \
+  && apt-get -qqy install \
+    ${CHROME_VERSION:-google-chrome-stable} \
+  && rm /etc/apt/sources.list.d/google-chrome.list \
+  && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
 RUN wget https://storage.googleapis.com/kubernetes-release/release/$KUBECTL_VERSION/bin/linux/amd64/kubectl && \
     mv kubectl /bin/kubectl && \
@@ -36,4 +45,5 @@ RUN wget https://storage.googleapis.com/kubernetes-release/release/$KUBECTL_VERS
     mv /tmp/sonobuoy /usr/local/bin && \
     chmod +x /usr/local/bin/sonobuoy && \
     cd $WORKSPACE && \
-    pip install -r requirements_v3api.txt
+    pip install -r requirements_v3api.txt && \
+    sbase install chromedriver latest
